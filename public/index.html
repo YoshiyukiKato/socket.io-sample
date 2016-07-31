@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <div>
+      <label for="happy">happy: </label>
+      <input id="happy" class="viewer" value="" readonly/>
+      <label for="sad">sad: </label>
+      <input id="sad" class="viewer" value="" readonly/>
+    </div>
+    <div>
+      <button class="trigger" value="happy">happy</button>
+      <button class="trigger" value="sad">sad</button>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      var socket = io();
+      var counts = {
+        happy: 0,
+        sad: 0,
+      };
+      
+      //共有カウントをサーバから取得して初期化
+      socket.on('fetch', function(sharedCounts){
+        counts = JSON.parse(sharedCounts);
+        //カウントを初期化したら描画
+        render(counts);
+      });
+      socket.emit('fetch', '');
+      
+      //共有カウントに更新があったらcountsを同期
+      socket.on('update', function(change){
+        //ここで、changeの内容を読んでカウントを更新する
+        //たとえば、{ sad:6 }という内容がjsonで送られてきたら、sadの値を更新する
+        var updatedCounts = JSON.parse(change);
+        counts = Object.assign(counts, updatedCounts);
+        //カウントを更新したら再描画
+        render(counts);
+      });
+
+      //ボタンクリックに応じる処理
+      $('.trigger').on('click', function(){
+        var emotion = $(this).val();
+        socket.emit('update', emotion);
+      });
+
+      //描画更新処理を単一の関数に切り出すとわかりやすい
+      //今回はrender関数を作って処理を書いている
+      //render関数では、readonlyのinputを更新する処理が書いてある
+      //three.jsの場合も、更新処理を関数化してまとめてあげるとよい
+      function render(counts){
+        $(".viewer").each(function(){
+          var emotion = $(this).attr("id");
+          $(this).val(counts[emotion]);
+        });
+      }
+    </script>
+  </body>
+</html>
